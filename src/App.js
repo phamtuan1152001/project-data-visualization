@@ -6,7 +6,7 @@ import * as d3 from "d3";
 
 import axios from "axios";
 
-import { Spin, Pagination } from "antd";
+import { Spin, Pagination, Select } from "antd";
 
 function App() {
   const svgRef = useRef();
@@ -19,7 +19,7 @@ function App() {
   const [chartdata, setChartdata] = useState();
   const [total, setTotal] = useState(0);
 
-  // console.log("chartdata", chartdata);
+  console.log("chartdata", chartdata);
 
   const getPagination = (page, size) => {
     const limit = size ? +size : 0;
@@ -32,30 +32,81 @@ function App() {
     fetchData();
   }, []);
 
-  const fetchData = async (page = 1, size = 6) => {
+  function renameKeys(obj, newKeys) {
+    const entries = Object.keys(obj).map((key) => {
+      const newKey = newKeys[key] || key;
+
+      return { [newKey]: obj[key] };
+    });
+
+    return Object.assign({}, ...entries);
+  }
+
+  const fetchData = async (page = 1, size = 6, type = "total_cases_text") => {
+    const options = {
+      method: "GET",
+      url: "https://covid-19-tracking.p.rapidapi.com/v1",
+      headers: {
+        "X-RapidAPI-Key": "7e83a33b3cmsh27f89b4ac854566p1f6f7djsn8b517897d4d8",
+        "X-RapidAPI-Host": "covid-19-tracking.p.rapidapi.com",
+      },
+    };
     try {
       setLoading(true);
-      const { data } = await axios.get(
-        "https://api.apify.com/v2/key-value-stores/tVaYRsPHLjNdNBu7S/records/LATEST?disableRedirect=true"
-      );
+      const { data } = await axios.request(options);
       if (data?.length > 0) {
-        const { offset } = getPagination(page, size);
-        const list = data?.filter((item) => !!item?.infected);
-        console.log("list", list);
+        const test = data?.slice(1);
+        const changeKey = test?.map((item) => {
+          const newKeys = {
+            "Active Cases_text": "active_cases_text",
+            Country_text: "country_text",
+            "Last Update": "last_update",
+            "New Cases_text": "new_cases_text",
+            "New Deaths_text": "new_deaths_text",
+            "Total Cases_text": "total_cases_text",
+            "Total Deaths_text": "total_deaths_text",
+            "Total Recovered_text": "total_recovered_text",
+          };
+
+          return renameKeys(item, newKeys);
+        });
+        const changeValue = changeKey?.map((item) => {
+          return {
+            ...item,
+            // active_cases_text: parseInt(
+            //   item?.active_cases_text?.replace(/,/g, "")
+            // ),
+            // new_cases_text: parseInt(item?.new_cases_text?.replace(/,/g, "")),
+            // new_deaths_text: parseInt(item?.new_deaths_text?.replace(/,/g, "")),
+            total_cases_text: parseInt(
+              item?.total_cases_text?.replace(/,/g, "")
+            ),
+            total_deaths_text: parseInt(
+              item?.total_deaths_text?.replace(/,/g, "")
+            ),
+            total_recovered_text: parseInt(
+              item?.total_recovered_text?.replace(/,/g, "")
+            ),
+          };
+        });
+        const list = changeValue?.map((item) => {
+          return item;
+        });
         setTotal(list?.length);
+        const { offset } = getPagination(page, size);
         const listData = list
           ?.map((item, index) => {
             return {
-              name: item?.country,
-              value: item?.infected,
+              name: item?.country_text,
+              value: item[type],
               id: index + 1,
             };
           })
           .slice(offset, offset + 6);
         setChartdata(listData);
       }
-    } catch (err) {
-      console.log("FETCH FAIL!", err);
+    } catch (error) {
+      console.error(error);
     } finally {
       setLoading(false);
     }
@@ -117,10 +168,27 @@ function App() {
     }
   }, [chartdata]);
 
+  const handleChangeSelect = (value) => {
+    // console.log("value", value);
+    fetchData(1, 6, value);
+  };
+
   return (
     <React.Fragment>
       <div className="App">
         <Spin spinning={loading}>
+          <div>
+            <Select
+              defaultValue="total_cases_text"
+              style={{ width: 120 }}
+              onChange={(e) => handleChangeSelect(e)}
+              options={[
+                { value: "total_cases_text", label: "Total cases" },
+                { value: "total_deaths_text", label: "Total deaths" },
+                { value: "total_recovered_text", label: "Total recovered" },
+              ]}
+            />
+          </div>
           <div className="App-header">
             <svg
               id="chart"
@@ -135,6 +203,7 @@ function App() {
                 defaultCurrent={1}
                 pageSize={6}
                 total={total}
+                showSizeChanger={false}
                 onChange={(page, pageSize) => {
                   fetchData(page, pageSize);
                 }}
