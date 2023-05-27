@@ -8,6 +8,8 @@ import axios from "axios";
 
 import { Spin, Pagination, Select } from "antd";
 
+import moment from "moment";
+
 function App() {
   const svgRef = useRef();
 
@@ -22,9 +24,10 @@ function App() {
 
   const [pageNumber, setPageNumber] = useState(1);
   const [typeFilter, setTypeFilter] = useState("total_cases_text");
+  const [dateFilter, setDateFilter] = useState("all");
 
-  console.log("chartdata", chartdata);
-  console.log("test", { pageNumber, typeFilter });
+  // console.log("chartdata", chartdata);
+  console.log("test", { pageNumber, typeFilter, dateFilter });
 
   const getPagination = (page, size) => {
     const limit = size ? +size : 0;
@@ -36,6 +39,26 @@ function App() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  function getDaysArrayByMonth() {
+    var daysInMonth = moment().daysInMonth();
+    var arrDays = [];
+
+    while (daysInMonth) {
+      var current = moment().date(daysInMonth);
+      arrDays.push(current);
+      daysInMonth--;
+    }
+
+    return arrDays.reverse();
+  }
+
+  const listDate = getDaysArrayByMonth().map((item) => {
+    return {
+      label: moment(item).format("DD/MM/YYYY"),
+      value: moment(item).format("DD/MM/YYYY"),
+    };
+  });
 
   function renameKeys(obj, newKeys) {
     const entries = Object.keys(obj).map((key) => {
@@ -50,7 +73,8 @@ function App() {
   const fetchData = async (
     page = pageNumber,
     size = NUMBER_OF_ITEM,
-    type = typeFilter
+    type = typeFilter,
+    date = dateFilter
   ) => {
     const options = {
       method: "GET",
@@ -87,6 +111,9 @@ function App() {
             // ),
             // new_cases_text: parseInt(item?.new_cases_text?.replace(/,/g, "")),
             // new_deaths_text: parseInt(item?.new_deaths_text?.replace(/,/g, "")),
+            last_update: moment(item?.last_update).isValid()
+              ? moment(item?.last_update).format("DD/MM/YYYY")
+              : "--",
             total_cases_text: parseInt(
               item?.total_cases_text?.replace(/,/g, "")
             ),
@@ -98,21 +125,42 @@ function App() {
             ),
           };
         });
-        const list = changeValue?.map((item) => {
-          return item;
-        });
-        setTotal(list?.length);
-        const { offset } = getPagination(page, size);
-        const listData = list
-          ?.map((item, index) => {
-            return {
-              name: item?.country_text,
-              value: item[type],
-              id: index + 1,
-            };
-          })
-          .slice(offset, offset + 6);
-        setChartdata(listData);
+        if (date === "all") {
+          const list = changeValue?.map((item) => {
+            return item;
+          });
+          setTotal(list?.length);
+          const { offset } = getPagination(page, size);
+          const listData = list
+            ?.map((item, index) => {
+              return {
+                name: item?.country_text,
+                value: item[type],
+                id: index + 1,
+              };
+            })
+            .slice(offset, offset + 6);
+          setChartdata(listData);
+        } else {
+          const list = changeValue?.map((item) => {
+            return item;
+          });
+          const filterDate = list.filter(
+            (item) => item.last_update === dateFilter
+          );
+          setTotal(filterDate?.length);
+          const { offset } = getPagination(page, size);
+          const listData = filterDate
+            ?.map((item, index) => {
+              return {
+                name: item?.country_text,
+                value: item[type],
+                id: index + 1,
+              };
+            })
+            .slice(offset, offset + 6);
+          setChartdata(listData);
+        }
       }
     } catch (error) {
       console.error(error);
@@ -178,10 +226,14 @@ function App() {
   }, [chartdata]);
 
   useEffect(() => {
-    if (pageNumber !== 1 || typeFilter !== "total_cases_text") {
-      fetchData(pageNumber, NUMBER_OF_ITEM, typeFilter);
+    if (
+      pageNumber !== 1 ||
+      typeFilter !== "total_cases_text" ||
+      dateFilter !== "all"
+    ) {
+      fetchData(pageNumber, NUMBER_OF_ITEM, typeFilter, dateFilter);
     }
-  }, [pageNumber, typeFilter]);
+  }, [pageNumber, typeFilter, dateFilter]);
 
   const handleChangeSelect = (value) => {
     // console.log("value", value);
@@ -189,21 +241,36 @@ function App() {
     // fetchData(1, 6, value);
   };
 
+  const handleChangeDate = (value) => {
+    // console.log("value", value);
+    setDateFilter(value);
+  };
+
   return (
     <React.Fragment>
       <div className="App">
         <Spin spinning={loading}>
           <div>
-            <Select
-              defaultValue="total_cases_text"
-              style={{ width: 120 }}
-              onChange={(e) => handleChangeSelect(e)}
-              options={[
-                { value: "total_cases_text", label: "Total cases" },
-                { value: "total_deaths_text", label: "Total deaths" },
-                { value: "total_recovered_text", label: "Total recovered" },
-              ]}
-            />
+            <div>
+              <Select
+                defaultValue="total_cases_text"
+                style={{ width: 120 }}
+                onChange={(e) => handleChangeSelect(e)}
+                options={[
+                  { value: "total_cases_text", label: "Total cases" },
+                  { value: "total_deaths_text", label: "Total deaths" },
+                  { value: "total_recovered_text", label: "Total recovered" },
+                ]}
+              />
+            </div>
+            <div>
+              <Select
+                defaultValue={moment().format("DD/MM/YYYY")}
+                style={{ width: 120 }}
+                onChange={(e) => handleChangeDate(e)}
+                options={listDate}
+              />
+            </div>
           </div>
           <div className="App-header">
             <svg
