@@ -14,12 +14,17 @@ function App() {
   const width = 900;
   const height = 350;
   const padding = 20;
+  const NUMBER_OF_ITEM = 6;
 
   const [loading, setLoading] = useState(false);
   const [chartdata, setChartdata] = useState();
   const [total, setTotal] = useState(0);
 
+  const [pageNumber, setPageNumber] = useState(1);
+  const [typeFilter, setTypeFilter] = useState("total_cases_text");
+
   console.log("chartdata", chartdata);
+  console.log("test", { pageNumber, typeFilter });
 
   const getPagination = (page, size) => {
     const limit = size ? +size : 0;
@@ -42,7 +47,11 @@ function App() {
     return Object.assign({}, ...entries);
   }
 
-  const fetchData = async (page = 1, size = 6, type = "total_cases_text") => {
+  const fetchData = async (
+    page = pageNumber,
+    size = NUMBER_OF_ITEM,
+    type = typeFilter
+  ) => {
     const options = {
       method: "GET",
       url: "https://covid-19-tracking.p.rapidapi.com/v1",
@@ -168,9 +177,16 @@ function App() {
     }
   }, [chartdata]);
 
+  useEffect(() => {
+    if (pageNumber !== 1 || typeFilter !== "total_cases_text") {
+      fetchData(pageNumber, NUMBER_OF_ITEM, typeFilter);
+    }
+  }, [pageNumber, typeFilter]);
+
   const handleChangeSelect = (value) => {
     // console.log("value", value);
-    fetchData(1, 6, value);
+    setTypeFilter(value);
+    // fetchData(1, 6, value);
   };
 
   return (
@@ -205,7 +221,8 @@ function App() {
                 total={total}
                 showSizeChanger={false}
                 onChange={(page, pageSize) => {
-                  fetchData(page, pageSize);
+                  // fetchData(page, pageSize);
+                  setPageNumber(page);
                 }}
               />
             )}
