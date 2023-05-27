@@ -14,13 +14,12 @@ function App() {
   const width = 900;
   const height = 350;
   const padding = 20;
-  const maxValue = 20; // Maximum data value
 
   const [loading, setLoading] = useState(false);
   const [chartdata, setChartdata] = useState();
   const [total, setTotal] = useState(0);
 
-  console.log("chartdata", chartdata);
+  // console.log("chartdata", chartdata);
 
   const getPagination = (page, size) => {
     const limit = size ? +size : 0;
@@ -40,8 +39,9 @@ function App() {
         "https://api.apify.com/v2/key-value-stores/tVaYRsPHLjNdNBu7S/records/LATEST?disableRedirect=true"
       );
       if (data?.length > 0) {
-        const { limit, offset } = getPagination(page, size);
+        const { offset } = getPagination(page, size);
         const list = data?.filter((item) => !!item?.infected);
+        console.log("list", list);
         setTotal(list?.length);
         const listData = list
           ?.map((item, index) => {
@@ -121,7 +121,7 @@ function App() {
     <React.Fragment>
       <div className="App">
         <Spin spinning={loading}>
-          <header className="App-header">
+          <div className="App-header">
             <svg
               id="chart"
               ref={svgRef}
@@ -140,7 +140,7 @@ function App() {
                 }}
               />
             )}
-          </header>
+          </div>
         </Spin>
       </div>
     </React.Fragment>
