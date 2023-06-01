@@ -333,9 +333,19 @@ function App() {
                     />
                   </div>
                 </div>
-                <div className="">
-                  {chartdata?.length > 0 && (
+                <div
+                  className={
+                    chartdata?.length === 0
+                      ? "d-flex flex-row justify-content-center align-items-center w-100"
+                      : ""
+                  }
+                >
+                  {chartdata?.length > 0 ? (
                     <PieChart data={chartdata} width={600} height={300} />
+                  ) : (
+                    <div className="d-flex flex-column justify-content-center align-items-center h-100">
+                      <Empty />
+                    </div>
                   )}
                 </div>
               </div>
