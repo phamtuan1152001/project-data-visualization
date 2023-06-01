@@ -10,6 +10,9 @@ import { Spin, Pagination, Select, Calendar, theme, Empty } from "antd";
 
 import moment from "moment";
 
+// import PieChart from "./components/PieChart";
+import { PieChart } from "./components/PieChart";
+
 function App() {
   const svgRef = useRef();
 
@@ -251,7 +254,7 @@ function App() {
       <div className="content-wrapper">
         <div className="d-flex flex-column justify-content-center align-items-cennter h-100">
           <div className="row">
-            <div className="col-9">
+            <div className="col-8">
               <div className="total-data mb-5">
                 <h1 className="title-chart mb-3">Total data in World</h1>
                 <div className="d-flex flex-row justify-content-around align-items-center">
@@ -320,15 +323,20 @@ function App() {
                 </div>
               </div>
             </div>
-            <div className="col-3">
+            <div className="col-4">
               <div className="d-flex flex-column justify-content-start align-items-start h-100">
-                <div className="filter-date-content">
+                <div className="filter-date-content d-flex flex-row justify-content-center w-100">
                   <div style={wrapperStyle}>
                     <Calendar
                       fullscreen={false}
                       onChange={(value) => handleOnChange(value.format())}
                     />
                   </div>
+                </div>
+                <div className="">
+                  {chartdata?.length > 0 && (
+                    <PieChart data={chartdata} width={600} height={300} />
+                  )}
                 </div>
               </div>
             </div>
