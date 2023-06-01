@@ -21,7 +21,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [chartdata, setChartdata] = useState();
   const [total, setTotal] = useState(0);
-
+  console.log("chartdata", chartdata);
   const [pageNumber, setPageNumber] = useState(1);
   const [typeFilter, setTypeFilter] = useState("total_cases_text");
   const [dateFilter, setDateFilter] = useState("all");
@@ -42,7 +42,12 @@ function App() {
 
   function getDaysArrayByMonth() {
     var daysInMonth = moment().daysInMonth();
-    var arrDays = [];
+    var arrDays = [
+      {
+        label: "All",
+        value: "all",
+      },
+    ];
 
     while (daysInMonth) {
       var current = moment().date(daysInMonth);
@@ -55,8 +60,8 @@ function App() {
 
   const listDate = getDaysArrayByMonth().map((item) => {
     return {
-      label: moment(item).format("DD/MM/YYYY"),
-      value: moment(item).format("DD/MM/YYYY"),
+      label: item?.label !== "All" ? moment(item).format("DD/MM/YYYY") : "All",
+      value: item?.value !== "all" ? moment(item).format("DD/MM/YYYY") : "all",
     };
   });
 
@@ -70,102 +75,113 @@ function App() {
     return Object.assign({}, ...entries);
   }
 
+  const handleLogicData = (page, size, type, date, data) => {
+    if (data?.length > 0) {
+      const test = data?.slice(1);
+      const changeKey = test?.map((item) => {
+        const newKeys = {
+          "Active Cases_text": "active_cases_text",
+          Country_text: "country_text",
+          "Last Update": "last_update",
+          "New Cases_text": "new_cases_text",
+          "New Deaths_text": "new_deaths_text",
+          "Total Cases_text": "total_cases_text",
+          "Total Deaths_text": "total_deaths_text",
+          "Total Recovered_text": "total_recovered_text",
+        };
+
+        return renameKeys(item, newKeys);
+      });
+      const changeValue = changeKey?.map((item) => {
+        return {
+          ...item,
+          // active_cases_text: parseInt(
+          //   item?.active_cases_text?.replace(/,/g, "")
+          // ),
+          // new_cases_text: parseInt(item?.new_cases_text?.replace(/,/g, "")),
+          // new_deaths_text: parseInt(item?.new_deaths_text?.replace(/,/g, "")),
+          last_update: moment(item?.last_update).isValid()
+            ? moment(item?.last_update).format("DD/MM/YYYY")
+            : "--",
+          total_cases_text: parseInt(item?.total_cases_text?.replace(/,/g, "")),
+          total_deaths_text: parseInt(
+            item?.total_deaths_text?.replace(/,/g, "")
+          ),
+          total_recovered_text: parseInt(
+            item?.total_recovered_text?.replace(/,/g, "")
+          ),
+        };
+      });
+      if (date === "all") {
+        const list = changeValue?.map((item) => {
+          return item;
+        });
+        setTotal(list?.length);
+        const { offset } = getPagination(page, size);
+        const listData = list
+          ?.map((item, index) => {
+            return {
+              name: item?.country_text,
+              value: item[type],
+              id: index + 1,
+            };
+          })
+          .slice(offset, offset + 6);
+        setChartdata(listData);
+      } else {
+        const list = changeValue?.map((item) => {
+          return item;
+        });
+        const filterDate = list.filter(
+          (item) => item.last_update === dateFilter
+        );
+        setTotal(filterDate?.length);
+        const { offset } = getPagination(page, size);
+        const listData = filterDate
+          ?.map((item, index) => {
+            return {
+              name: item?.country_text,
+              value: item[type],
+              id: index + 1,
+            };
+          })
+          .slice(offset, offset + 6);
+        setChartdata(listData);
+      }
+    }
+  };
+
   const fetchData = async (
     page = pageNumber,
     size = NUMBER_OF_ITEM,
     type = typeFilter,
     date = dateFilter
   ) => {
-    const options = {
-      method: "GET",
-      url: "https://covid-19-tracking.p.rapidapi.com/v1",
-      headers: {
-        "X-RapidAPI-Key": "7e83a33b3cmsh27f89b4ac854566p1f6f7djsn8b517897d4d8",
-        "X-RapidAPI-Host": "covid-19-tracking.p.rapidapi.com",
-      },
-    };
-    try {
-      setLoading(true);
-      const { data } = await axios.request(options);
-      if (data?.length > 0) {
-        const test = data?.slice(1);
-        const changeKey = test?.map((item) => {
-          const newKeys = {
-            "Active Cases_text": "active_cases_text",
-            Country_text: "country_text",
-            "Last Update": "last_update",
-            "New Cases_text": "new_cases_text",
-            "New Deaths_text": "new_deaths_text",
-            "Total Cases_text": "total_cases_text",
-            "Total Deaths_text": "total_deaths_text",
-            "Total Recovered_text": "total_recovered_text",
-          };
-
-          return renameKeys(item, newKeys);
-        });
-        const changeValue = changeKey?.map((item) => {
-          return {
-            ...item,
-            // active_cases_text: parseInt(
-            //   item?.active_cases_text?.replace(/,/g, "")
-            // ),
-            // new_cases_text: parseInt(item?.new_cases_text?.replace(/,/g, "")),
-            // new_deaths_text: parseInt(item?.new_deaths_text?.replace(/,/g, "")),
-            last_update: moment(item?.last_update).isValid()
-              ? moment(item?.last_update).format("DD/MM/YYYY")
-              : "--",
-            total_cases_text: parseInt(
-              item?.total_cases_text?.replace(/,/g, "")
-            ),
-            total_deaths_text: parseInt(
-              item?.total_deaths_text?.replace(/,/g, "")
-            ),
-            total_recovered_text: parseInt(
-              item?.total_recovered_text?.replace(/,/g, "")
-            ),
-          };
-        });
-        if (date === "all") {
-          const list = changeValue?.map((item) => {
-            return item;
-          });
-          setTotal(list?.length);
-          const { offset } = getPagination(page, size);
-          const listData = list
-            ?.map((item, index) => {
-              return {
-                name: item?.country_text,
-                value: item[type],
-                id: index + 1,
-              };
-            })
-            .slice(offset, offset + 6);
-          setChartdata(listData);
-        } else {
-          const list = changeValue?.map((item) => {
-            return item;
-          });
-          const filterDate = list.filter(
-            (item) => item.last_update === dateFilter
-          );
-          setTotal(filterDate?.length);
-          const { offset } = getPagination(page, size);
-          const listData = filterDate
-            ?.map((item, index) => {
-              return {
-                name: item?.country_text,
-                value: item[type],
-                id: index + 1,
-              };
-            })
-            .slice(offset, offset + 6);
-          setChartdata(listData);
+    const list = JSON.parse(localStorage.getItem("data"));
+    if (list?.length > 0) {
+      handleLogicData(page, size, type, date, list);
+    } else {
+      const options = {
+        method: "GET",
+        url: "https://covid-19-tracking.p.rapidapi.com/v1",
+        headers: {
+          "X-RapidAPI-Key":
+            "ba62bc4643msh5fca547996026bdp159685jsnc87fc926e591",
+          "X-RapidAPI-Host": "covid-19-tracking.p.rapidapi.com",
+        },
+      };
+      try {
+        setLoading(true);
+        const { data } = await axios.request(options);
+        localStorage.setItem("data", JSON.stringify(data));
+        if (data?.length > 0) {
+          handleLogicData(page, size, type, date, data);
         }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error(error);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -250,29 +266,34 @@ function App() {
     <React.Fragment>
       <div className="App">
         <Spin spinning={loading}>
-          <div>
-            <div>
-              <Select
-                defaultValue="total_cases_text"
-                style={{ width: 120 }}
-                onChange={(e) => handleChangeSelect(e)}
-                options={[
-                  { value: "total_cases_text", label: "Total cases" },
-                  { value: "total_deaths_text", label: "Total deaths" },
-                  { value: "total_recovered_text", label: "Total recovered" },
-                ]}
-              />
-            </div>
-            <div>
-              <Select
-                defaultValue={moment().format("DD/MM/YYYY")}
-                style={{ width: 120 }}
-                onChange={(e) => handleChangeDate(e)}
-                options={listDate}
-              />
-            </div>
-          </div>
           <div className="App-header">
+            <div className="container">
+              <div className="d-flex flex-row justify-content-start align-items-center gap-5">
+                <div>
+                  <Select
+                    defaultValue="total_cases_text"
+                    style={{ width: 120 }}
+                    onChange={(e) => handleChangeSelect(e)}
+                    options={[
+                      { value: "total_cases_text", label: "Total cases" },
+                      { value: "total_deaths_text", label: "Total deaths" },
+                      {
+                        value: "total_recovered_text",
+                        label: "Total recovered",
+                      },
+                    ]}
+                  />
+                </div>
+                <div>
+                  <Select
+                    defaultValue={"All"}
+                    style={{ width: 120 }}
+                    onChange={(e) => handleChangeDate(e)}
+                    options={listDate}
+                  />
+                </div>
+              </div>
+            </div>
             <svg
               id="chart"
               ref={svgRef}
