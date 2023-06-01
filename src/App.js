@@ -6,12 +6,20 @@ import * as d3 from "d3";
 
 import axios from "axios";
 
-import { Spin, Pagination, Select } from "antd";
+import { Spin, Pagination, Select, Calendar, theme, Empty } from "antd";
 
 import moment from "moment";
 
 function App() {
   const svgRef = useRef();
+
+  const { token } = theme.useToken();
+  const wrapperStyle = {
+    width: 450,
+    // margin: 50,
+    border: `1px solid ${token.colorBorderSecondary}`,
+    borderRadius: token.borderRadiusLG,
+  };
 
   const width = 900;
   const height = 350;
@@ -21,13 +29,14 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [chartdata, setChartdata] = useState();
   const [total, setTotal] = useState(0);
-  console.log("chartdata", chartdata);
+  const [firstItem, setFirstItem] = useState({});
+
   const [pageNumber, setPageNumber] = useState(1);
   const [typeFilter, setTypeFilter] = useState("total_cases_text");
-  const [dateFilter, setDateFilter] = useState("all");
+  const [dateFilter, setDateFilter] = useState(moment().format("DD/MM/YYYY"));
 
   // console.log("chartdata", chartdata);
-  console.log("test", { pageNumber, typeFilter, dateFilter });
+  // console.log("test", { pageNumber, typeFilter, dateFilter });
 
   const getPagination = (page, size) => {
     const limit = size ? +size : 0;
@@ -40,31 +49,6 @@ function App() {
     fetchData();
   }, []);
 
-  function getDaysArrayByMonth() {
-    var daysInMonth = moment().daysInMonth();
-    var arrDays = [
-      {
-        label: "All",
-        value: "all",
-      },
-    ];
-
-    while (daysInMonth) {
-      var current = moment().date(daysInMonth);
-      arrDays.push(current);
-      daysInMonth--;
-    }
-
-    return arrDays.reverse();
-  }
-
-  const listDate = getDaysArrayByMonth().map((item) => {
-    return {
-      label: item?.label !== "All" ? moment(item).format("DD/MM/YYYY") : "All",
-      value: item?.value !== "all" ? moment(item).format("DD/MM/YYYY") : "all",
-    };
-  });
-
   function renameKeys(obj, newKeys) {
     const entries = Object.keys(obj).map((key) => {
       const newKey = newKeys[key] || key;
@@ -75,10 +59,22 @@ function App() {
     return Object.assign({}, ...entries);
   }
 
+  const renderText = (type) => {
+    switch (type) {
+      case "total_deaths_text":
+        return "Total number of deaths with covid 19";
+      case "total_recovered_text":
+        return "Total number of recovered cases with covid 19";
+      default:
+        return "Total number of positive cases of covid 19";
+    }
+  };
+
   const handleLogicData = (page, size, type, date, data) => {
     if (data?.length > 0) {
-      const test = data?.slice(1);
-      const changeKey = test?.map((item) => {
+      // setFirstItem(data[0]);
+      // const test = data?.slice(1);
+      const changeKey = data?.map((item) => {
         const newKeys = {
           "Active Cases_text": "active_cases_text",
           Country_text: "country_text",
@@ -92,7 +88,9 @@ function App() {
 
         return renameKeys(item, newKeys);
       });
-      const changeValue = changeKey?.map((item) => {
+      setFirstItem(changeKey[0]);
+      const test = changeKey?.slice(1);
+      const changeValue = test?.map((item) => {
         return {
           ...item,
           // active_cases_text: parseInt(
@@ -112,30 +110,13 @@ function App() {
           ),
         };
       });
-      if (date === "all") {
-        const list = changeValue?.map((item) => {
-          return item;
-        });
-        setTotal(list?.length);
-        const { offset } = getPagination(page, size);
-        const listData = list
-          ?.map((item, index) => {
-            return {
-              name: item?.country_text,
-              value: item[type],
-              id: index + 1,
-            };
-          })
-          .slice(offset, offset + 6);
-        setChartdata(listData);
-      } else {
-        const list = changeValue?.map((item) => {
-          return item;
-        });
-        const filterDate = list.filter(
-          (item) => item.last_update === dateFilter
-        );
-        setTotal(filterDate?.length);
+      const list = changeValue?.map((item) => {
+        return item;
+      });
+      const filterDate = list.filter((item) => item.last_update === dateFilter);
+      setTotal(filterDate?.length);
+      if (filterDate?.length > 0) {
+        // console.log("filterDate", filterDate);
         const { offset } = getPagination(page, size);
         const listData = filterDate
           ?.map((item, index) => {
@@ -147,6 +128,8 @@ function App() {
           })
           .slice(offset, offset + 6);
         setChartdata(listData);
+      } else {
+        setChartdata([]);
       }
     }
   };
@@ -257,22 +240,42 @@ function App() {
     // fetchData(1, 6, value);
   };
 
-  const handleChangeDate = (value) => {
-    // console.log("value", value);
-    setDateFilter(value);
+  const handleOnChange = (value) => {
+    const date_time = moment(value).format("DD/MM/YYYY");
+    // console.log("value", moment(value).format("DD/MM/YYYY"));
+    setDateFilter(date_time);
   };
 
   return (
     <React.Fragment>
-      <div className="App">
-        <Spin spinning={loading}>
-          <div className="App-header">
-            <div className="container">
-              <div className="d-flex flex-row justify-content-start align-items-center gap-5">
-                <div>
+      <div className="content-wrapper">
+        <div className="d-flex flex-column justify-content-center align-items-cennter h-100">
+          <div className="row">
+            <div className="col-9">
+              <div className="total-data mb-5">
+                <h1 className="title-chart mb-3">Total data in World</h1>
+                <div className="d-flex flex-row justify-content-around align-items-center">
+                  <div className="total-data-box-cases">
+                    <h3 className="cases-title">Total cases</h3>
+                    <p className="cases-des">{firstItem.total_cases_text}</p>
+                  </div>
+                  <div className="total-data-box-death">
+                    <h3 className="death-title">Total death</h3>
+                    <p className="death-des">{firstItem.total_deaths_text}</p>
+                  </div>
+                  <div className="total-data-box-recovered">
+                    <h3 className="recovered-title">Total recovered</h3>
+                    <p className="recovered-des">
+                      {firstItem.total_recovered_text}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="chart-content">
+                <div className="d-flex flex-row justify-content-end align-items-center">
                   <Select
                     defaultValue="total_cases_text"
-                    style={{ width: 120 }}
+                    style={{ width: 150 }}
                     onChange={(e) => handleChangeSelect(e)}
                     options={[
                       { value: "total_cases_text", label: "Total cases" },
@@ -284,38 +287,53 @@ function App() {
                     ]}
                   />
                 </div>
-                <div>
-                  <Select
-                    defaultValue={"All"}
-                    style={{ width: 120 }}
-                    onChange={(e) => handleChangeDate(e)}
-                    options={listDate}
-                  />
+                <div className="chart-box">
+                  <h1 className="title-chart">{renderText(typeFilter)}</h1>
+                  {chartdata?.length > 0 ? (
+                    <svg
+                      id="chart"
+                      ref={svgRef}
+                      viewBox={`0 0 ${width} ${height}`}
+                      // style={{ paddingLeft: 100, paddingRight: 0 }}
+                    >
+                      <path d="" fill="none" stroke="white" strokeWidth="5" />
+                    </svg>
+                  ) : (
+                    <div className="d-flex flex-column justify-content-center align-items-center h-100">
+                      <Empty />
+                    </div>
+                  )}
+                  <div className="d-flex flex-row justify-content-center align-items-center mt-5">
+                    {!!total && (
+                      <Pagination
+                        defaultCurrent={1}
+                        pageSize={6}
+                        total={total}
+                        showSizeChanger={false}
+                        onChange={(page, pageSize) => {
+                          // fetchData(page, pageSize);
+                          setPageNumber(page);
+                        }}
+                      />
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
-            <svg
-              id="chart"
-              ref={svgRef}
-              viewBox={`0 0 ${width} ${height}`}
-              style={{ paddingLeft: 100, paddingRight: 100 }}
-            >
-              <path d="" fill="none" stroke="white" strokeWidth="5" />
-            </svg>
-            {!!total && (
-              <Pagination
-                defaultCurrent={1}
-                pageSize={6}
-                total={total}
-                showSizeChanger={false}
-                onChange={(page, pageSize) => {
-                  // fetchData(page, pageSize);
-                  setPageNumber(page);
-                }}
-              />
-            )}
+            <div className="col-3">
+              <div className="d-flex flex-column justify-content-center align-items-center h-100">
+                <div className="filter-date-content">
+                  <div style={wrapperStyle}>
+                    <Calendar
+                      fullscreen={false}
+                      onChange={(value) => handleOnChange(value.format())}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-        </Spin>
+        </div>
       </div>
     </React.Fragment>
   );
