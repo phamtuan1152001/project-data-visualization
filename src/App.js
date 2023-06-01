@@ -303,7 +303,7 @@ function App() {
                       <Empty />
                     </div>
                   )}
-                  <div className="d-flex flex-row justify-content-center align-items-center mt-5">
+                  <div className="d-flex flex-row justify-content-center align-items-center mt-2">
                     {!!total && (
                       <Pagination
                         defaultCurrent={1}
@@ -321,7 +321,7 @@ function App() {
               </div>
             </div>
             <div className="col-3">
-              <div className="d-flex flex-column justify-content-center align-items-center h-100">
+              <div className="d-flex flex-column justify-content-start align-items-start h-100">
                 <div className="filter-date-content">
                   <div style={wrapperStyle}>
                     <Calendar
